@@ -121,7 +121,7 @@ class Maze(tk.Tk, object):
         elif s_ in [self.canvas.coords(self.hell1), self.canvas.coords(self.hell2)]:
             reward = -1
             done = True
-            s_ = 'terminal'
+            s_ = 'hole'
         else:
             reward = 0
             done = False
