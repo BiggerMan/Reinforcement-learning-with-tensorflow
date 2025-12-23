@@ -13,6 +13,7 @@ from RL_brain import SarsaLambdaTable
 
 def update():
     for episode in range(100):
+        print(f"episode: {episode}")
         # initial observation
         observation = env.reset()
 
@@ -21,6 +22,7 @@ def update():
 
         # initial all zero eligibility trace
         RL.eligibility_trace *= 0
+        steps_count = 0
 
         while True:
             # fresh env
@@ -28,11 +30,12 @@ def update():
 
             # RL take action and get next observation and reward
             observation_, reward, done = env.step(action)
+            steps_count += 1
 
             # RL choose action based on next observation
             action_ = RL.choose_action(str(observation_))
 
-            # RL learn from this transition (s, a, r, s, a) ==> Sarsa
+            # RL learn from this transition (s, a, r, s_, a_) ==> Sarsa
             RL.learn(str(observation), action, reward, str(observation_), action_)
 
             # swap observation and action
@@ -41,11 +44,17 @@ def update():
 
             # break while loop when end of this episode
             if done:
+                RL.print_eligibility_trace()
+                if observation_ != 'terminal':
+                    print(f"Episode {episode} finished because it trap into a hole after {steps_count} steps")
+                else:
+                    print(f"Episode {episode} finished because it reach the goal after {steps_count} steps")
                 break
 
     # end of game
     print('game over')
     env.destroy()
+
 
 if __name__ == "__main__":
     env = Maze()

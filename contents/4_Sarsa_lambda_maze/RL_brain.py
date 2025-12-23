@@ -21,12 +21,16 @@ class RL(object):
     def check_state_exist(self, state):
         if state not in self.q_table.index:
             # append new state to q table
-            self.q_table = self.q_table.append(
-                pd.Series(
-                    [0]*len(self.actions),
-                    index=self.q_table.columns,
-                    name=state,
-                )
+            # 直接使用 pd.concat 替代 append 添加新状态
+            new_state = pd.Series(
+                [0] * len(self.actions),
+                index=self.q_table.columns,
+                name=state,
+            )
+            # 将新状态转换为DataFrame并与原q_table合并
+            self.q_table = pd.concat(
+                [self.q_table, new_state.to_frame().T],
+                ignore_index=False
             )
 
     def choose_action(self, observation):
@@ -63,15 +67,22 @@ class SarsaLambdaTable(RL):
                     index=self.q_table.columns,
                     name=state,
                 )
-            self.q_table = self.q_table.append(to_be_append)
+            self.q_table = pd.concat(
+                [self.q_table, to_be_append.to_frame().T],
+                ignore_index=False
+            )
 
             # also update eligibility trace
-            self.eligibility_trace = self.eligibility_trace.append(to_be_append)
+            self.eligibility_trace = pd.concat(
+                [self.eligibility_trace, to_be_append.to_frame().T],
+                ignore_index=False
+            )
 
     def learn(self, s, a, r, s_, a_):
         self.check_state_exist(s_)
         q_predict = self.q_table.loc[s, a]
-        if s_ != 'terminal':
+        if s_ != 'terminal' and s_ != 'hole':
+            # self.q_table.loc[s_, a_]：s_ 行 a_ 列的 Q 值
             q_target = r + self.gamma * self.q_table.loc[s_, a_]  # next state is not terminal
         else:
             q_target = r  # next state is terminal
@@ -83,6 +94,8 @@ class SarsaLambdaTable(RL):
         # self.eligibility_trace.loc[s, a] += 1
 
         # Method 2:
+        # 强化学习中的资格迹（Eligibility Trace）机制，用于Sarsa (λ) 算法中，
+        # 核心作用是追踪近期影响过 Q 值的 状态+动作 对（S,A），并根据反馈误差对这些状态 - 动作对的 Q 值进行高效更新。
         self.eligibility_trace.loc[s, :] *= 0
         self.eligibility_trace.loc[s, a] = 1
 
@@ -91,3 +104,15 @@ class SarsaLambdaTable(RL):
 
         # decay eligibility trace after update
         self.eligibility_trace *= self.gamma*self.lambda_
+
+    def print_q_table(self):
+        print(self.q_table)
+
+    def print_eligibility_trace(self):
+        print(self.eligibility_trace)
+
+    def save_q_table(self, file_path='q_table.csv'):
+        self.q_table.to_csv(file_path)
+
+    def save_eligibility_trace(self, file_path='eligibility_trace.csv'):
+        self.eligibility_trace.to_csv(file_path)
